@@ -3,13 +3,9 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# Sayfa yapılandırması
 st.set_page_config(page_title="EGEKAF 2026 Kontrol", page_icon="🚌")
 
-# Secrets'tan öğrenci listesini çek
 ogrenci_verisi = st.secrets["ogrenci_listesi"]
-
-# Google Sheets Bağlantısı
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 st.title("🚌 EGEKAF 2026 Otobüs Kontrolü")
@@ -27,8 +23,8 @@ if tel_input:
         if st.button("Onayla ve Kaydet"):
             if onay:
                 try:
-                    # Mevcut verileri oku
-                    existing_data = conn.read()
+                    # DÜZELTME BURADA: ttl=0 ile cache devre dışı bırakıldı. Canlı veri okunur.
+                    existing_data = conn.read(ttl=0)
                     
                     # Tablo boşsa başlıklarla oluştur
                     if existing_data is None or existing_data.empty:
@@ -38,7 +34,7 @@ if tel_input:
                     if tel_input in existing_data["Telefon"].astype(str).values:
                         st.warning(f"Sayın {isim}, bu numara ile daha önce biniş onayı verilmiş.")
                     else:
-                        # Yeni biniş kaydı (3. sütun: Onay Durumu)
+                        # Yeni biniş kaydı
                         yeni_kayit = {
                             "Telefon": tel_input, 
                             "Ad Soyad": isim, 
@@ -50,6 +46,9 @@ if tel_input:
                         # Veriyi birleştir ve tabloyu güncelle
                         updated_df = pd.concat([existing_data, new_entry], ignore_index=True)
                         conn.update(data=updated_df)
+                        
+                        # Bir sonraki işlem için Streamlit önbelleğini temizle
+                        st.cache_data.clear()
                         
                         st.balloons()
                         st.success(f"İşlem Başarılı! İyi yolculuklar {isim}.")
